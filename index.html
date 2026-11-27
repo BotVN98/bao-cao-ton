@@ -179,14 +179,6 @@
   </div>
 </div>
 
-  // Tự động kiểm tra chuyển ngày sau 0h (mỗi 1 phút kiểm tra 1 lần)
-  setInterval(() => {
-    const currentDate = getToday();
-    if (dateInput.value !== currentDate) {
-      dateInput.value = currentDate; // Cập nhật ngày mới
-      loadDataForDate(currentDate);  // Tải dữ liệu trống của ngày mới
-    }
-  }, 60000); // 60000 ms = 1 phút
 <script>
   const names = ['Thùng Xanh Fresh', 'Thùng Xanh FMCG', 'Rổ Đen'];
   const dateInput = document.getElementById('date');
@@ -298,6 +290,20 @@
   dateInput.addEventListener('change', () => {
     loadDataForDate(dateInput.value);
   });
+  // Khi người dùng đổi ngày trên lịch -> Tải dữ liệu của ngày đó
+  dateInput.addEventListener('change', () => {
+    loadDataForDate(dateInput.value);
+  });
+
+  // Tự động kiểm tra chuyển ngày sau 0h (mỗi 1 phút kiểm tra 1 lần)
+  setInterval(() => {
+    const currentDate = getToday();
+    if (dateInput.value !== currentDate) {
+      dateInput.value = currentDate; // Cập nhật ngày mới
+      loadDataForDate(currentDate);  // Tải dữ liệu trống của ngày mới
+    }
+  }, 60000); // 60000 ms = 1 phút
+
 </script>
 </body>
 </html>
