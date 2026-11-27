@@ -183,67 +183,61 @@
   const names = ['Thùng Xanh Fresh', 'Thùng Xanh FMCG', 'Rổ Đen'];
   const dateInput = document.getElementById('date');
 
-  // ===== KHỞI TẠO NGÀY =====
-  function initDate() {
-    const saved = localStorage.getItem('reportDate');
-    const today = new Date().toISOString().split('T')[0];
-    dateInput.value = saved || today;
+  // Hàm lấy ngày hôm nay (định dạng YYYY-MM-DD)
+  function getToday() {
+    const today = new Date();
+    const offset = today.getTimezoneOffset();
+    const localToday = new Date(today.getTime() - (offset*60*1000));
+    return localToday.toISOString().split('T')[0];
   }
 
-  // ===== KHỞI TẠO DỮ LIỆU =====
-  function initData() {
+  // Hàm tải dữ liệu của ngày được chọn
+  function loadDataForDate(dateStr) {
     for (let i = 0; i < 3; i++) {
-      const savedActual = localStorage.getItem(`actual-${i}`);
-      const savedApp = localStorage.getItem(`app-${i}`);
-      if (savedActual !== null) {
-        document.querySelector(`.actual[data-row="${i}"]`).value = savedActual;
-      }
-      if (savedApp !== null) {
-        document.querySelector(`.app[data-row="${i}"]`).value = savedApp;
-      }
+      const savedActual = localStorage.getItem(`actual-${i}-${dateStr}`);
+      const savedApp = localStorage.getItem(`app-${i}-${dateStr}`);
+      
+      // Nếu ngày đó đã có dữ liệu thì load lên, chưa có thì để trống (mặc định)
+      document.querySelector(`.actual[data-row="${i}"]`).value = savedActual !== null ? savedActual : '';
+      document.querySelector(`.app[data-row="${i}"]`).value = savedApp !== null ? savedApp : '';
+    }
+    update();
+  }
+
+  // Hàm lưu dữ liệu theo ngày
+  function saveDataForDate() {
+    const dateStr = dateInput.value;
+    for (let i = 0; i < 3; i++) {
+      localStorage.setItem(`actual-${i}-${dateStr}`, document.querySelector(`.actual[data-row="${i}"]`).value);
+      localStorage.setItem(`app-${i}-${dateStr}`, document.querySelector(`.app[data-row="${i}"]`).value);
     }
   }
 
-  // ===== LƯU DỮ LIỆU =====
-  function saveData() {
-    for (let i = 0; i < 3; i++) {
-      localStorage.setItem(`actual-${i}`, document.querySelector(`.actual[data-row="${i}"]`).value);
-      localStorage.setItem(`app-${i}`, document.querySelector(`.app[data-row="${i}"]`).value);
-    }
-  }
-
-  // ===== CẬP NHẬT GIAO DIỆN =====
+  // Hàm tính toán (giữ nguyên)
   function update() {
     let totalDiff = 0;
     let summaryHtml = '';
-
     for (let i = 0; i < 3; i++) {
       const actual = parseInt(document.querySelector(`.actual[data-row="${i}"]`).value) || 0;
       const app = parseInt(document.querySelector(`.app[data-row="${i}"]`).value) || 0;
       const diff = actual - app;
       totalDiff += diff;
-
+      
       const el = document.getElementById(`diff-${i}`);
       el.textContent = diff > 0 ? `+${diff}` : diff;
       el.className = 'diff ' + (diff > 0 ? 'pos' : diff < 0 ? 'neg' : 'zero');
-
       summaryHtml += `<div>• <strong>${names[i]}</strong>: ${actual} − ${app} = <b>${diff > 0 ? '+' : ''}${diff}</b></div>`;
     }
-
     summaryHtml = `<div style="margin-bottom:8px;"><strong>Tổng quan:</strong></div>` + summaryHtml;
-    summaryHtml += `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed #cbd5e0;">
-      <strong>Tổng chênh lệch:</strong> <b style="color:${totalDiff > 0 ? '#22543d' : totalDiff < 0 ? '#742a2a' : '#4a5568'}">${totalDiff > 0 ? '+' : ''}${totalDiff}</b>
-    </div>`;
+    summaryHtml += `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed #cbd5e0;"><strong>Tổng chênh lệch:</strong> <b style="color:${totalDiff > 0 ? '#22543d' : totalDiff < 0 ? '#742a2a' : '#4a5568'}">${totalDiff > 0 ? '+' : ''}${totalDiff}</b></div>`;
     document.getElementById('summary').innerHTML = summaryHtml;
   }
 
-  // ===== FORMAT NGÀY =====
+  // Hàm copy báo cáo (giữ nguyên)
   function formatDateVN(isoDate) {
     const [y, m, d] = isoDate.split('-');
     return `${d}/${m}/${y}`;
   }
-
-  // ===== COPY BÁO CÁO =====
   function copyReport() {
     const date = formatDateVN(dateInput.value);
     let text = `Bc tồn rổ thùng ngày ${date}\n\n➡️ Tồn Thực Tế\n`;
@@ -259,50 +253,42 @@
       const d = actuals[i] - apps[i];
       text += `- ${names[i]}: ${d > 0 ? '+' : ''}${d}\n`;
     }
-
     navigator.clipboard.writeText(text).then(() => {
       const btn = document.querySelector('.btn');
       const orig = btn.textContent;
       btn.textContent = '✅ Đã copy!';
       setTimeout(() => btn.textContent = orig, 1500);
     }).catch(() => {
-      // Fallback cho trình duyệt cũ
       const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
       alert('✅ Đã copy báo cáo!');
     });
   }
 
-  // ===== XÓA DỮ LIỆU =====
+  // Hàm xóa dữ liệu của ngày đang chọn
   function resetData() {
-    if (!confirm('Bạn có chắc muốn xóa toàn bộ dữ liệu đã nhập?')) return;
+    if (!confirm('Bạn có chắc muốn xóa dữ liệu của ngày này?')) return;
+    const dateStr = dateInput.value;
     for (let i = 0; i < 3; i++) {
-      localStorage.removeItem(`actual-${i}`);
-      localStorage.removeItem(`app-${i}`);
+      localStorage.removeItem(`actual-${i}-${dateStr}`);
+      localStorage.removeItem(`app-${i}-${dateStr}`);
     }
-    localStorage.removeItem('reportDate');
-    location.reload();
+    loadDataForDate(dateStr); // Tải lại (sẽ ra trống)
   }
 
-  // ===== KHỞI ĐỘNG =====
-  initDate();
-  initData();
-  update();
+  // KHỞI TẠO: Tự động nhảy ngày hôm nay
+  dateInput.value = getToday(); 
+  loadDataForDate(dateInput.value);
 
-  // ===== LẮNG NGHE SỰ KIỆN =====
+  // Lắng nghe sự kiện
   document.querySelectorAll('input[type="number"]').forEach(inp => {
-    inp.addEventListener('input', () => {
-      update();
-      saveData();
-    });
+    inp.addEventListener('input', () => { update(); saveDataForDate(); });
   });
 
+  // Khi người dùng đổi ngày trên lịch -> Tải dữ liệu của ngày đó
   dateInput.addEventListener('change', () => {
-    localStorage.setItem('reportDate', dateInput.value);
+    loadDataForDate(dateInput.value);
   });
 </script>
 </body>
