@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Báo Cáo Tồn Rổ Thùng</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  :root {
+    --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --muted: #64748b;
+    --line: #e2e8f0; --head: #f8fafc; --primary: #1d4ed8; --primary-d: #1e3a8a;
+    --pos-t: #166534; --pos-b: #dcfce7; --neg-t: #991b1b; --neg-b: #fee2e2;
+    --zero-t: #475569; --zero-b: #e2e8f0; --focus: #dbeafe; --shadow: 0 8px 24px rgba(15,23,42,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1220; --card: #111a2e; --text: #e5eaf3; --muted: #94a3b8;
+      --line: #22304a; --head: #16223a; --primary: #3b82f6; --primary-d: #1d4ed8;
+      --pos-t: #86efac; --pos-b: #14532d; --neg-t: #fca5a5; --neg-b: #7f1d1d;
+      --zero-t: #cbd5e1; --zero-b: #22304a; --focus: #1e3a8a; --shadow: 0 8px 24px rgba(0,0,0,.4);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+    background: var(--bg); color: var(--text);
+    padding: 16px; min-height: 100vh;
+  }
+  .container { max-width: 720px; margin: 0 auto; background: var(--card); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; border: 1px solid var(--line); }
+  .header { background: linear-gradient(135deg, var(--primary), var(--primary-d)); color: #fff; padding: 22px 24px; }
+  .header h1 { font-size: 20px; font-weight: 700; letter-spacing: .2px; }
+  .header p { font-size: 13px; opacity: .8; margin-top: 2px; }
+  .datebar { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+  .datebar input[type="date"] {
+    flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.3);
+    background: rgba(255,255,255,.14); color: #fff; font-size: 15px; font-weight: 600; font-family: inherit;
+    color-scheme: dark;
+  }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(255,255,255,.3);
+    background: rgba(255,255,255,.14); color: #fff; font-size: 18px; cursor: pointer;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,.25); }
+  .today-btn { height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.14); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .today-btn:hover { background: rgba(255,255,255,.25); }
+  .weekday { font-size: 13px; opacity: .85; margin-top: 8px; }
+
+  .content { padding: 20px 24px 24px; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 12px 10px; text-align: center; border-bottom: 1px solid var(--line); font-size: 15px; }
+  tbody tr:last-child td { border-bottom: none; }
+  th { background: var(--head); color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; }
+  th:first-child, td:first-child { text-align: left; padding-left: 14px; }
+  td:first-child { font-weight: 600; }
+  tfoot td { background: var(--head); font-weight: 700; border-top: 2px solid var(--line); border-bottom: none; }
+  input[type="number"] {
+    width: 84px; padding: 9px 8px; border: 1.5px solid var(--line); border-radius: 10px;
+    font-size: 15px; text-align: center; background: var(--card); color: var(--text); font-family: inherit;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input[type="number"]::placeholder { color: var(--muted); opacity: .6; }
+  input[type="number"]:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--focus); }
+  .diff { display: inline-block; min-width: 56px; padding: 5px 10px; border-radius: 999px; font-weight: 700; font-size: 14px; }
+  .diff.pos { color: var(--pos-t); background: var(--pos-b); }
+  .diff.neg { color: var(--neg-t); background: var(--neg-b); }
+  .diff.zero { color: var(--zero-t); background: var(--zero-b); }
+
+  .status { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding: 12px 14px; border-radius: 12px; font-size: 14px; font-weight: 600; }
+  .status.pos { color: var(--pos-t); background: var(--pos-b); }
+  .status.neg { color: var(--neg-t); background: var(--neg-b); }
+  .status.zero { color: var(--zero-t); background: var(--zero-b); }
+  .note { margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+
+  .actions { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 18px; }
+  .btn { padding: 13px 18px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: 1.5px solid transparent; font-family: inherit; transition: transform .12s, box-shadow .12s; }
+  .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-d)); color: #fff; }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(29,78,216,.3); }
+  .btn-ghost { background: transparent; color: var(--neg-t); border-color: var(--line); }
+  .btn-ghost:hover { background: var(--neg-b); }
+  .saved { text-align: right; font-size: 12px; color: var(--muted); margin-top: 10px; min-height: 16px; }
+
+  @media (max-width: 520px) {
+    body { padding: 10px; }
+    .content { padding: 16px 12px 20px; }
+    th, td { padding: 10px 4px; font-size: 13px; }
+    th:first-child, td:first-child { padding-left: 10px; }
+    input[type="number"] { width: 62px; padding: 8px 4px; font-size: 14px; }
+    .diff { min-width: 44px; font-size: 13px; padding: 4px 8px; }
+    .actions { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>📦 Báo Cáo Tồn Rổ Thùng</h1>
+    <p>Đối chiếu tồn thực tế và tồn trên app</p>
+    <div class="datebar">
+      <button class="icon-btn" id="prev" aria-label="Ngày trước">‹</button>
+      <input type="date" id="date" aria-label="Chọn ngày">
+      <button class="icon-btn" id="next" aria-label="Ngày sau">›</button>
+      <button class="today-btn" id="today">Hôm nay</button>
+    </div>
+    <div class="weekday" id="weekday"></div>
+  </div>
+
+  <div class="content">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Loại</th><th>Thực tế</th><th>Tồn app</th><th>Chênh lệch</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Thùng Xanh Fresh</td>
+            <td><input type="number" inputmode="numeric" class="actual" data-row="0" placeholder="0"></td>
+            <td><input type="number" inputmode="numeric" class="app" data-row="0" placeholder="0"></td>
+            <td><span class="diff zero" id="diff-0">0</span></td>
+          </tr>
+          <tr>
+            <td>Thùng Xanh FMCG</td>
+            <td><input type="number" inputmode="numeric" class="actual" data-row="1" placeholder="0"></td>
+            <td><input type="number" inputmode="numeric" class="app" data-row="1" placeholder="0"></td>
+            <td><span class="diff zero" id="diff-1">0</span></td>
+          </tr>
+          <tr>
+            <td>Rổ Đen</td>
+            <td><input type="number" inputmode="numeric" class="actual" data-row="2" placeholder="0"></td>
+            <td><input type="number" inputmode="numeric" class="app" data-row="2" placeholder="0"></td>
+            <td><span class="diff zero" id="diff-2">0</span></td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Tổng</td>
+            <td id="tot-actual">0</td>
+            <td id="tot-app">0</td>
+            <td><span class="diff zero" id="tot-diff">0</span></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="status zero" id="status"></div>
+    <div class="note">Chênh lệch = Tồn thực tế − Tồn app. Dữ liệu tự lưu theo từng ngày.</div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="copyBtn">📋 Copy báo cáo</button>
+      <button class="btn btn-ghost" id="resetBtn">🗑 Xóa dữ liệu ngày này</button>
+    </div>
+    <div class="saved" id="saved"></div>
+  </div>
+</div>
+
+<script>
+  const names = ['Thùng Xanh Fresh', 'Thùng Xanh FMCG', 'Rổ Đen'];
+  const dateInput = document.getElementById('date');
+  const actualEls = [0, 1, 2].map(i => document.querySelector(`.actual[data-row="${i}"]`));
+  const appEls = [0, 1, 2].map(i => document.querySelector(`.app[data-row="${i}"]`));
+  const weekdays = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+
+  function store(fn) { try { return fn(); } catch (e) { return null; } }
+  const num = el => parseInt(el.value) || 0;
+  const sign = n => (n > 0 ? '+' + n : String(n));
+  const cls = n => (n > 0 ? 'pos' : n < 0 ? 'neg' : 'zero');
+
+  function toISO(d) {
+    const l = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return l.toISOString().split('T')[0];
+  }
+  const getToday = () => toISO(new Date());
+  function formatDateVN(iso) { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; }
+  function shiftDate(days) {
+    const d = new Date(dateInput.value + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    dateInput.value = toISO(d);
+    loadDataForDate(dateInput.value);
+  }
+
+  function setDiff(el, n) { el.textContent = sign(n); el.className = 'diff ' + cls(n); }
+
+  function update() {
+    let ta = 0, tp = 0;
+    for (let i = 0; i < 3; i++) {
+      const a = num(actualEls[i]), p = num(appEls[i]);
+      ta += a; tp += p;
+      setDiff(document.getElementById(`diff-${i}`), a - p);
+    }
+    const td = ta - tp;
+    document.getElementById('tot-actual').textContent = ta;
+    document.getElementById('tot-app').textContent = tp;
+    setDiff(document.getElementById('tot-diff'), td);
+    const st = document.getElementById('status');
+    st.className = 'status ' + cls(td);
+    st.textContent = td === 0 ? '✅ Tồn thực tế khớp với tồn app'
+      : td > 0 ? `⬆️ Thực tế nhiều hơn app ${td} đơn vị`
+      : `⚠️ Thực tế thiếu ${Math.abs(td)} đơn vị so với app`;
+    const d = new Date(dateInput.value + 'T00:00:00');
+    document.getElementById('weekday').textContent = isNaN(d) ? '' : weekdays[d.getDay()] + ', ' + formatDateVN(dateInput.value);
+  }
+
+  function loadDataForDate(dateStr) {
+    for (let i = 0; i < 3; i++) {
+      const a = store(() => localStorage.getItem(`actual-${i}-${dateStr}`));
+      const p = store(() => localStorage.getItem(`app-${i}-${dateStr}`));
+      actualEls[i].value = a !== null && a !== undefined ? a : '';
+      appEls[i].value = p !== null && p !== undefined ? p : '';
+    }
+    document.getElementById('saved').textContent = '';
+    update();
+  }
+
+  function saveDataForDate() {
+    const dateStr = dateInput.value;
+    for (let i = 0; i < 3; i++) {
+      store(() => localStorage.setItem(`actual-${i}-${dateStr}`, actualEls[i].value));
+      store(() => localStorage.setItem(`app-${i}-${dateStr}`, appEls[i].value));
+    }
+    const t = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('saved').textContent = 'Đã lưu lúc ' + t;
+  }
+
+  function buildReport() {
+    const a = actualEls.map(num), p = appEls.map(num);
+    let t = `Bc tồn rổ thùng ngày ${formatDateVN(dateInput.value)}\n\n➡️ Tồn Thực Tế\n`;
+    t += names.map((n, i) => `- ${n}: ${a[i]}`).join('\n') + '\n\n';
+    t += `➡️ Tồn App\n` + names.map((n, i) => `- ${n}: ${p[i]}`).join('\n') + '\n\n';
+    t += `➡️ Chênh Lệch\n` + names.map((n, i) => `- ${n}: ${sign(a[i] - p[i])}`).join('\n') + '\n';
+    return t;
+  }
+
+  function copyReport() {
+    const text = buildReport();
+    const btn = document.getElementById('copyBtn');
+    const done = () => {
+      const orig = '📋 Copy báo cáo';
+      btn.textContent = '✅ Đã copy!';
+      setTimeout(() => (btn.textContent = orig), 1500);
+    };
+    const fallback = () => {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      done();
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(fallback);
+    } else fallback();
+  }
+
+  function resetData() {
+    if (!confirm('Bạn có chắc muốn xóa dữ liệu của ngày này?')) return;
+    const dateStr = dateInput.value;
+    for (let i = 0; i < 3; i++) {
+      store(() => localStorage.removeItem(`actual-${i}-${dateStr}`));
+      store(() => localStorage.removeItem(`app-${i}-${dateStr}`));
+    }
+    loadDataForDate(dateStr);
+  }
+
+  // Khởi tạo
+  dateInput.value = getToday();
+  loadDataForDate(dateInput.value);
+
+  document.querySelectorAll('input[type="number"]').forEach(inp =>
+    inp.addEventListener('input', () => { update(); saveDataForDate(); })
+  );
+  dateInput.addEventListener('change', () => loadDataForDate(dateInput.value));
+  document.getElementById('prev').addEventListener('click', () => shiftDate(-1));
+  document.getElementById('next').addEventListener('click', () => shiftDate(1));
+  document.getElementById('today').addEventListener('click', () => { dateInput.value = getToday(); loadDataForDate(dateInput.value); });
+  document.getElementById('copyBtn').addEventListener('click', copyReport);
+  document.getElementById('resetBtn').addEventListener('click', resetData);
+
+  // Tự chuyển sang ngày mới sau 0h (nếu đang xem ngày hôm qua)
+  let lastToday = getToday();
+  setInterval(() => {
+    const now = getToday();
+    if (now !== lastToday) {
+      if (dateInput.value === lastToday) { dateInput.value = now; loadDataForDate(now); }
+      lastToday = now;
+    }
+  }, 60000);
+</script>
+</body>
+</html>
