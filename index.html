@@ -72,10 +72,14 @@
   .status.zero { color: var(--zero-t); background: var(--zero-b); }
   .note { margin-top: 10px; font-size: 12.5px; color: var(--muted); }
 
-  .actions { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 18px; }
-  .btn { padding: 13px 18px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: 1.5px solid transparent; font-family: inherit; transition: transform .12s, box-shadow .12s; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+  .btn { padding: 13px 10px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1.5px solid transparent; font-family: inherit; transition: transform .12s, box-shadow .12s; display: flex; align-items: center; justify-content: center; gap: 6px; }
   .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-d)); color: #fff; }
   .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(29,78,216,.3); }
+  .btn-line { background: #06C755; color: #fff; }
+  .btn-line:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(6,199,85,.3); }
+  .btn-share { background: #0ea5e9; color: #fff; }
+  .btn-share:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(14,165,233,.3); }
   .btn-ghost { background: transparent; color: var(--neg-t); border-color: var(--line); }
   .btn-ghost:hover { background: var(--neg-b); }
   .saved { text-align: right; font-size: 12px; color: var(--muted); margin-top: 10px; min-height: 16px; }
@@ -87,7 +91,8 @@
     th:first-child, td:first-child { padding-left: 10px; }
     input[type="number"] { width: 62px; padding: 8px 4px; font-size: 14px; }
     .diff { min-width: 44px; font-size: 13px; padding: 4px 8px; }
-    .actions { grid-template-columns: 1fr; }
+    .actions { grid-template-columns: 1fr 1fr; } /* Vẫn giữ 2 cột cho 4 nút trên mobile */
+    .btn { font-size: 13px; padding: 12px 5px; }
   }
 </style>
 </head>
@@ -146,8 +151,10 @@
     <div class="note">Chênh lệch = Tồn thực tế − Tồn app. Dữ liệu tự lưu theo từng ngày.</div>
 
     <div class="actions">
-      <button class="btn btn-primary" id="copyBtn">📋 Copy báo cáo</button>
-      <button class="btn btn-ghost" id="resetBtn">🗑 Xóa dữ liệu ngày này</button>
+      <button class="btn btn-primary" id="copyBtn">📋 Copy</button>
+      <button class="btn btn-line" id="lineBtn">🟢 Gửi LINE</button>
+      <button class="btn btn-share" id="shareBtn">💬 Chia sẻ khác</button>
+      <button class="btn btn-ghost" id="resetBtn">🗑 Xóa</button>
     </div>
     <div class="saved" id="saved"></div>
   </div>
@@ -233,8 +240,8 @@
   function copyReport() {
     const text = buildReport();
     const btn = document.getElementById('copyBtn');
+    const orig = '📋 Copy';
     const done = () => {
-      const orig = '📋 Copy báo cáo';
       btn.textContent = '✅ Đã copy!';
       setTimeout(() => (btn.textContent = orig), 1500);
     };
@@ -247,6 +254,33 @@
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(done).catch(fallback);
     } else fallback();
+  }
+
+  // HÀM GỬI QUA LINE TRỰC TIẾP
+  function shareLine() {
+    const text = buildReport();
+    // Mã hóa nội dung để đưa vào URL
+    const encodedText = encodeURIComponent(text);
+    const lineUrl = `https://line.me/R/msg/text/?${encodedText}`;
+    // Mở ứng dụng LINE
+    window.open(lineUrl, '_blank');
+  }
+
+  // HÀM CHIA SẺ QUA ỨNG DỤNG KHÁC (Zalo, Telegram, Messenger...)
+  async function shareReport() {
+    const text = buildReport();
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Báo cáo tồn rổ thùng',
+          text: text
+        });
+      } catch (err) {
+        console.log('Lỗi hoặc người dùng hủy chia sẻ:', err);
+      }
+    } else {
+      alert('Trình duyệt của bạn không hỗ trợ chia sẻ trực tiếp. Vui lòng dùng nút "Copy" nhé!');
+    }
   }
 
   function resetData() {
@@ -271,6 +305,8 @@
   document.getElementById('next').addEventListener('click', () => shiftDate(1));
   document.getElementById('today').addEventListener('click', () => { dateInput.value = getToday(); loadDataForDate(dateInput.value); });
   document.getElementById('copyBtn').addEventListener('click', copyReport);
+  document.getElementById('lineBtn').addEventListener('click', shareLine); // Gắn sự kiện nút LINE
+  document.getElementById('shareBtn').addEventListener('click', shareReport);
   document.getElementById('resetBtn').addEventListener('click', resetData);
 
   // Tự chuyển sang ngày mới sau 0h (nếu đang xem ngày hôm qua)
